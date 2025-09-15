@@ -1,3 +1,22 @@
+# Merged requirements file - pip packages with conda installation notes
+# Use: pip install -r requirements.txt
+# For conda packages marked below, use: conda install <package>
+
+# =============================================================================
+# PACKAGES REQUIRING CONDA INSTALLATION
+# =============================================================================
+# The following packages should be installed via conda instead of pip:
+# conda install bzip2=1.0.8 ca-certificates=2025.9.9 conda-pack=0.8.1
+# conda install expat=2.7.1 icu=73.1 libffi=3.4.4 nodejs=20.17.0
+# conda install openssl=3.0.17 python=3.12.9 setuptools=78.1.1
+# conda install sqlite=3.50.2 tk=8.6.14 tzdata=2025b ucrt=10.0.22621.0
+# conda install vc=14.3 vc14_runtime=14.44.35208 vs2015_runtime=14.44.35208
+# conda install wheel=0.45.1 xz=5.6.4 zlib=1.2.13
+
+# =============================================================================
+# PIP PACKAGES (Main installation method)
+# =============================================================================
+
 accessible-pygments==0.0.5
 ai21==4.0.3
 aiohappyeyeballs==2.6.1
@@ -39,7 +58,7 @@ cohere==5.15.0
 colorama==0.4.6
 colored==1.4.4
 comm==0.2.3
-conda-pack @ file:///C:/b/abs_7b5jwr84ex/croot/conda-pack_1752674284442/work
+# Note: conda-pack is available via conda - see conda packages section above
 contourpy==1.3.3
 coverage==7.10.2
 cryptography==45.0.5
@@ -282,7 +301,7 @@ scipy==1.16.1
 seaborn==0.13.2
 Send2Trash==1.8.3
 sentence-transformers==5.1.0
-setuptools==78.1.1
+# Note: setuptools is available via conda - see conda packages section above
 sgmllib3k==1.0.0
 shapely==2.1.1
 shellingham==1.5.4
@@ -344,7 +363,7 @@ webcolors==24.11.1
 webencodings==0.5.1
 websocket-client==1.8.0
 websockets==15.0.1
-wheel==0.45.1
+# Note: wheel is available via conda - see conda packages section above
 widgetsnbextension==4.0.14
 windapiclient @ file:///C:/Users/dc-develop-2/Documents/WXWork/1688856355359647/Cache/File/2025-07/windapiclient-1.0-py3-none-any.whl#sha256=63039c943e4c9b896a5834cb60df5b6ee1f9b43fddb9f12a88ce4825bed02256
 xlwings==0.33.15
