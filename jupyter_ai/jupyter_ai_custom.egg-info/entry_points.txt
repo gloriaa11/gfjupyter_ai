@@ -1,2 +1,0 @@
-[jupyterlab.extension]
-jupyter-ai = jupyter_ai.extension
