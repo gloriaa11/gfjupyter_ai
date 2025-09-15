@@ -1,0 +1,1276 @@
+
+»
+GFQuant数据API
+View page source
+GFQuant数据API
+¶
+DataApi - 因子数据接口
+¶
+class
+gfquant.
+DataApi
+(
+server=None
+,
+timeout_seconds=15
+,
+**kwargs
+)
+¶
+GFQuant DataApi
+量化因子库的数据接口
+参数:
+server
+(
+str
+) – 默认为因子库Python接口服务器，一般不必指定
+timeout_seconds
+(
+float
+) – 请求超时秒数
+get_trade_days
+(
+start=None
+,
+end=None
+,
+fmt='dt'
+)
+¶
+取交易日列表。
+参数:
+start
+(
+str
+) – 开始日期, 格式如: ‘20181008’
+end
+(
+str
+) – 结束日期, 格式如: ‘20181024’
+fmt
+(
+str
+) – 指定返回日期的格式，’dt’返回日期格式，’str’或’str-‘返回字符串格式，’i’返回整数格式
+返回:
+日期数组
+返回类型:
+numpy.ndarray
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_trade_days
+(
+'20181009'
+,
+'20181013'
+)
+get_factor_info
+(
+factor_class=None
+,
+keyword=None
+,
+compact=True
+)
+¶
+取因子信息表
+参数:
+factor_class
+(
+str
+) – 匹配因子大类名称(估值、成长、盈利质量等)和分类(alpha, market, period等)，不区分大小写
+keyword
+(
+str
+) – 在因子名称、因子描述中搜索的关键词，不区分大小写
+compact
+(
+bool
+) – 是否只返回常用的信息列
+返回:
+因子信息表
+返回类型:
+pandas.DataFrame
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_factor_info
+(
+'盈利质量'
+)
+>>>
+api
+.
+get_factor_info
+(
+'alpha'
+,
+keyword
+=
+'YOY'
+)
+>>>
+api
+.
+get_factor_info
+(
+'user'
+)
+# 用户自定义因子
+get_factor
+(
+factor_name
+,
+dates
+,
+codes=None
+,
+fill=False
+,
+out='df'
+)
+¶
+取因子数据。 alpha因子、行情数据、状态数据都用统一的接口取数。
+参数:
+factor_name
+(
+str
+) – 因子名称或列表，如’Q_EPS’, ‘CLOSE,CLOSE_ADJ’
+dates
+(
+str
+or
+list
+) – 日期字符串或列表，如‘20181012-20181024’、‘20181008,20181013,20181024’、[20190513, 20190603]
+codes
+(
+str
+or
+list
+,
+optional
+) – 股票代码列表，如‘000001.SZ, 600000.SH’, [‘000100.SZ’, ‘600519.SH’]
+fill
+(
+bool
+) – 如果当天没有因子数据，是否取更早日期的数据填充，默认为False; 若dates是时间范围(如‘20181012-20181024’)，则fill参数无效
+out
+(
+str
+) – ‘df’/’series’，如果数据只有一行，可选择返回DataFrame或Series
+返回:
+因子数据DataFrame，其index为日期，columns为证券代码。
+如果factor_name同时指定多个因子，则columns为2层的MultiIndex(因子名称, 证券代码)
+返回类型:
+pd.DataFrame
+or
+pd.Series
+or None
+Raises:
+ValueError
+– 请求参数错误
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_factor
+(
+'EP'
+,
+'20180102, 20180201, 20180301'
+)
+>>>
+api
+.
+get_factor
+(
+'CLOSE,CLOSE_ADJ,AMOUNT'
+,
+'20180201-20180301'
+,
+'000001.SZ, 600000.SH'
+)
+get_factor_series
+(
+factor
+,
+day
+,
+codes=None
+,
+fill=False
+,
+universe=None
+,
+exclude=None
+,
+neutral=False
+)
+¶
+取一个日期的一个因子数据，返回一个pandas.Series；可选因子中性化处理。
+注意：当取Barra风格因子和非alpha因子时，请勿指定
+neutral=True
+。因为Barra因子的原始值已标准化过，非alpha因子标准化处理没有意义。
+参数:
+factor
+(
+str
+or
+Series
+) – 因子名称或因子原始值的Series
+day
+(
+datetime
+or
+str
+) – 表示一个日期
+codes
+(
+str
+or
+list
+) – 股票代码列表，如‘000001.SZ, 600000.SH’
+fill
+(
+bool
+) – 如果当天没有因子数据，是否用更早的数据填充，同
+get_factor()
+的
+fill
+参数，仅当
+factor
+参数为因子名称时有效
+universe
+(
+str
+or
+callable
+) – 选样空间，默认值None，可选值：[‘ALL’, ‘HS300’, ‘ZZ500’, ‘ZZ800’, ‘ZZ1000’, ‘CYB’, ‘H50’];
+如为函数，则其形式为
+func(date, DataApi) -> pd.Series
+, 返回Series的index为股票代码, value为bool值(或value>0)表示对应的股票是否被选入股票池。
+(参见
+自定义选股池
+)
+exclude
+(
+bool
+or
+dict
+) –
+是否剔除新股/ST/停牌股票等，默认None(不剔除)。如为True, 则使用默认剔除条件:
+dict(no_new=120, no_st=True, no_suspend=True)
+;
+也可以设置为自定义剔除参数组合，如只剔除停牌:
+exclude={“no_suspend”: True}
+。dict可选参数说明：
+no_new
+(
+bool or int
+): 是否剔除新股，ex_new=120表示剔除上市交易日不超过120天的股票(如True,默认为120)
+no_st
+(
+bool
+): 是否剔除ST股票
+no_suspend
+(
+bool
+): 是否剔除停牌股票
+neutral
+(
+bool
+or
+dict
+) –
+是否做因子中性化处理，默认False(返回因子原始值); 如为True, 则使用以下6个参数的默认值，也即最常用的中性化处理参数组合来处理因子原始值并返回处理后的值。
+如其中某些参数不使用默认值可使用自定义参数组合，如只做log和zscore:
+neutral=dict(log=True, zscore=True)
+log
+(
+bool
+): 是否做log处理(自然对数)，一般在处理市值类因子时选用，默认False
+outlier
+(
+bool
+): 是否去极值(MAD处理)，默认True
+sector_fill
+(
+bool or str or float
+): 分行业填充缺失值的方式，默认为用行业中值填充(‘median’或True)，还可以用’min’/’max’/’mean’或直接指定一个用于填充的数值(如0); None则不填充
+sector_neu
+(
+bool or str
+): 做行业中性使用的因子，默认为中信一级行业(‘LEVEL_1_CITIC’或True); None则不做行业中性
+size_neu
+(
+bool or str
+): 做市值中性使用的因子，默认为总市值(‘MV’或True); None则不做市值中性
+zscore
+(
+bool
+): 是否做Z-Score变换，默认True
+返回:
+因子数据Series，其index为证券代码，values为因子值。
+返回类型:
+Series
+or None
+Raises:
+ValueError
+– 请求参数错误，或结果不是一维的Series
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_factor_series
+(
+'VOLUME'
+,
+'20190531'
+)
+>>>
+api
+.
+get_factor_series
+(
+'Q_EP'
+,
+'20190531'
+,
+universe
+=
+'HS300'
+,
+exclude
+=
+True
+,
+neutral
+=
+True
+)
+get_split_sector_series
+(
+tday
+,
+sector
+,
+split_sectors
+,
+codes=None
+,
+fill=False
+)
+¶
+取一个日期的一级行业因子数据，可选将部分一级行业拆分为二级行业
+参数:
+day
+(
+datetime
+or
+str
+) – 表示一个日期
+sector
+(
+str
+) – 一级行业因子名称， 如’LEVEL_1_CITIC’或’LEVEL_1_SW’
+split_sectors
+(
+list
+) – 需要拆分为二级行业的一级行业名称列表，如 [‘非银行金融’, ‘电子’]
+codes
+(
+str
+or
+list
+) – 股票代码列表，为None则取全市场股票
+返回:
+行业分类序列，index为股票名称，value为行业名称
+返回类型:
+pd.Series
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_factor_series
+(
+'20190401'
+,
+'LEVEL_1_SW'
+)
+.
+dropna
+()
+>>>
+api
+.
+get_split_sector_series
+(
+'20190401'
+,
+'LEVEL_1_SW'
+,
+split_sectors
+=
+[
+'非银金融'
+])
+.
+dropna
+()
+portfolio_weighting
+(
+expect_rtn_series
+,
+tday
+,
+weighting: Union[str
+,
+pandas.core.series.Series] = 'equal'
+,
+top_n=None
+,
+top_pct=None
+,
+per_sector_weighting=False
+,
+sector_first=False
+,
+bench=None
+,
+sector=None
+,
+split_sectors=None
+,
+sector_deviation=None
+,
+final_equal=False
+)
+¶
+组合加权构建：可选 “不考虑行业加权” 或 “先选股再分行业配权”或“先定行业权重，再行业内选股配权”。
+参数:
+expect_rtn_series
+(
+Series
+) – 预期收益序列，index为股票代码，value为nan的股票不可选
+tday
+(
+datetime
+or
+str
+) – 一个交易日日期
+weighting
+(
+str
+or
+Series
+or
+callable
+) – 股票权重分配方式，支持’equal’(等权)、’score’(使用expect_rtn_series参数的值)
+或一个函数(def func(score, dataApi) -> pd.Series)，也可以用另一个因子名称作为权重，如’FFMV’即为自由流通市值加权；
+权重取值只保留非负值
+top_n
+(
+int
+) – 选择前n个股票；如果’sector_first’=True，则在每个行业里选择前n个股票
+top_pct
+(
+float
+) – 选择前(pct*100)%个股票；如果’sector_first’=True，则在每个行业里选择前(pct*100)%个股票(四舍五入)
+per_sector_weighting
+(
+bool
+) – 是否分行业配权重，如为False, 则由此以下的参数都不生效
+sector_first
+(
+bool
+) – 是否先设定行业权重再在行业内选股, False:先选股票再按行业配权重; True:先定行业权重再选股再配权重
+bench
+(
+str
+) – 行业基准权重因子名称，目前支持 ‘WEIGHT_[H50|300|500|800|1000|CYBZ|CYB|ALL]’，以及行业等权’equal_sector’
+sector
+(
+str
+) – 一级行业因子名称，目前支持 ‘LEVEL_1_[CITIC|SW]’
+split_sectors
+(
+list
+) – 需要拆分为二级行业的一级行业名称列表
+sector_deviation
+(
+dict
+) – 行业权重偏离，被拆分的一级行业不能配置，应指定对应二级行业的值
+final_equal
+(
+bool
+) – 分行业选股(也配了权重)的最后，是否最终按每个股票等权配置(如场景：组合要和等权基准比较)
+返回:
+组合权重分配结果，其index为证券代码，values为权重值。
+返回类型:
+pd.Series
+portfolio_optimize
+(
+expect_rtn_series
+,
+tday
+,
+bench='WEIGHT_300'
+,
+sector='LEVEL_1_CITIC'
+,
+split_sectors=None
+,
+sect_exp_min=-0.0
+,
+sect_exp_max=0.0
+,
+sect_exp_min_deviation=None
+,
+sect_exp_max_deviation=None
+,
+style_factors='LNMV'
+,
+style_exp_min=-0.0
+,
+style_exp_max=0.0
+,
+style_exp_min_deviation=None
+,
+style_exp_max_deviation=None
+,
+rel_weight_min=None
+,
+rel_weight_max=0.02
+,
+abs_weight_min=0.0
+,
+abs_weight_max=0.1
+,
+bench_pct=0.8
+,
+turnover_max=None
+,
+pre_weight=None
+,
+trackerr_max=None
+,
+result_stock_count=None
+,
+result_weight_min=0.001
+,
+result_weight_sum=0.9999
+,
+fill_barra=False
+,
+verify_result=True
+)
+¶
+组合优化：控制组合相对于基准的行业/风格因子暴露、个股相对基准的权重偏离、个股的绝对权重、成分股的总权重占比、换手率和跟踪误差等。
+参数:
+expect_rtn_series
+(
+Series
+) – 预期收益序列，index为股票代码，不存在的股票(或value为nan的股票)不可选；
+不可选的股票相对基准的偏离(也可能出现一个行业的所有股票都不可选)，均不会导致优化器出错：
+1) 不可选的股票，即使它在基准中有权重，也不会受个股权重偏离参数的约束(它在优化结果中的权重一定是0)；
+2) 不可选的行业，如果它在基准中有权重，即使不能满足行业暴露参数的约束，也仅会输出一条警告信息。
+tday
+(
+datetime
+or
+str
+) – 一个交易日日期
+bench
+(
+str
+) – 基准权重因子名称，目前支持 ‘WEIGHT_[H50|300|500|800|1000|CYBZ|CYB|ALL]’
+sector
+(
+str
+) – 一级行业因子名称，目前支持 ‘LEVEL_1_[CITIC|SW]’
+split_sectors
+(
+list
+) – 需要拆分为二级行业的一级行业名称列表
+sect_exp_min
+(
+float
+) – 组合相对基准的行业暴露下限
+sect_exp_max
+(
+float
+) – 组合相对基准的行业暴露上限
+sect_exp_min_deviation
+(
+dict
+) – 单独设置行业暴露度在’sect_exp_min’基础上的偏离
+sect_exp_max_deviation
+(
+dict
+) – 单独设置行业暴露度在’sect_exp_max’基础上的偏离
+style_factors
+(
+str
+or
+list
+) – 可选’LNMV’(自由流通市值的自然对数) 或’BARRA’(10个Barra风格因子)，也可以自定义风格因子(参见
+因子标准化处理
+)
+style_exp_min
+(
+float
+) – 组合相对基准的风格因子暴露下限
+style_exp_max
+(
+float
+) – 组合相对基准的风格因子暴露上限
+style_exp_min_deviation
+(
+dict
+) – 单独设置风格因子暴露度在’style_exp_min’基础上的偏离
+style_exp_max_deviation
+(
+dict
+) – 单独设置风格因子暴露度在’style_exp_max’基础上的偏离
+rel_weight_min
+(
+float
+) – 组合内个股相对基准的的权重偏差下限，默认不限(None)
+rel_weight_max
+(
+float
+) – 组合内个股相对基准的的权重偏差上限
+abs_weight_min
+(
+float
+) – 组合内个股的绝对权重下限
+abs_weight_max
+(
+float
+) – 组合内个股的绝对权重上限
+bench_pct
+(
+float
+) – 组合内基准指数成分股的权重占比下限(上限为1，即全部在基准内选股)
+turnover_max
+(
+float
+) – 组合换手率上限
+pre_weight
+(
+pd.Series
+) – 调仓前的持仓权重，计算组合换手率使用(如无持仓可设为None)
+trackerr_max
+(
+float
+) – 组合跟踪误差上限
+result_stock_count
+(
+int
+) – 组合优化结果可返回的最大股票数量，个股权重按从大到小排序，超过此数量的个股的权重将被收回重新分配
+result_weight_min
+(
+float
+) – 组合优化结果要求的个股最低权重值，低于此值的个股的权重将被收回重新分配
+result_weight_sum
+(
+float
+) – 组合优化结果的总权重，为避免数值计算误差请设定为小于1的数
+fill_barra
+(
+bool
+) – 组合优化时，如果用到Barra因子但当日没有值，是否取前值填充
+verify_result
+(
+bool
+) – 组合优化后，复查结果是否符合约束条件
+返回:
+组合优化的结果Series，其index为证券代码，values为权重值。
+返回类型:
+Series
+get_rpvalue
+(
+names
+,
+report_periods=None
+,
+codes=None
+,
+day=None
+,
+day_back=400
+,
+**kwargs
+)
+¶
+“(Experimental) 取报告期数据(report-period value)。
+参数:
+names
+(
+str
+) – 报告期数据的名称或列表，如’RP_CASH_EQ’, ‘RP_Q_PROFIT, RP_Q_OPER_REV’
+report_periods
+(
+str
+or
+list
+,
+optional
+) – 报告期日期的字符串或列表，如‘20181231, 20190630’、[‘20181231’, ‘20190331’]；若report_periods=None,则取day日期能取到的最新报告期数值
+codes
+(
+str
+or
+list
+,
+optional
+) – 股票代码列表，如‘000001.SZ, 600000.SH’, [‘000100.SZ’, ‘600519.SH’]
+day
+(
+str
+,
+optional
+) – 指定本次查询的截止日期，如‘20181012’，该日期之后发布的公告数据不会在返回的结果里；默认值为当前日期
+day_back
+(
+str
+,
+optional
+) – 查询公告发布日期的回溯日数，默认400。若report_periods=None, 则(day-day_back)日期之前发布的公告不会在返回的结果里。
+返回:
+报告期数据DataFrame，columns为[‘report_period’, ‘wind_code’, ‘issue_date’] + names
+返回类型:
+pd.DataFrame
+or None
+Raises:
+ValueError
+– 请求参数错误
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_rpvalue
+(
+'RP_CASH_EQ'
+,
+'20181231, 20190630, 20191231'
+,
+day
+=
+'20200301'
+)
+>>>
+api
+.
+get_rpvalue
+(
+'RP_Q_PROFIT, RP_Q_OPER_REV'
+,
+'20190630, 20191231'
+,
+'000001.SZ, 600000.SH'
+)
+get_rpvalue_series
+(
+name
+,
+day
+,
+codes=None
+,
+report_period=None
+,
+fill=False
+,
+universe=None
+,
+exclude=None
+,
+neutral=False
+)
+¶
+(Experimental) 取一个日期可得的一个报告期数据，返回一个pandas.Series；可选因子中性化处理。
+参数:
+name
+(
+str
+) – 报告期数据名称，如’RP_CASH_EQ’
+day
+(
+str
+or
+datetime
+) – 表示当前日期，只取当前日期及之前发布的公告数据
+codes
+(
+str
+or
+list
+) – 股票代码列表，如‘000001.SZ, 600000.SH’, [‘000100.SZ’, ‘600519.SH’]
+report_period
+(
+None
+,
+str
+or
+datetime
+) – 默认值None，返回day日期可得的最新报告期数据；如指定了一个报告期日期，则返回day日期可得的该报告期数据，此时参数fill=True无效
+fill
+(
+bool
+) – 未指定报告期时(report_period==None)，对于没有最新报告期数据的股票，是否用更早报告期的数据填充，默认为不填充(False)
+universe
+(
+str
+or
+callable
+) – 同
+get_factor_series()
+的
+universe
+参数
+exclude
+(
+bool
+or
+dict
+) – 同
+get_factor_series()
+的
+exclude
+参数
+neutral
+(
+bool
+or
+dict
+) – 同
+get_factor_series()
+的
+neutral
+参数
+返回:
+报告期数据Series，其index为证券代码，values为因子值。
+返回类型:
+Series
+or None
+Raises:
+ValueError
+– 请求参数错误，或结果不是一维的Series
+实际案例
+>>>
+api
+=
+DataApi
+()
+>>>
+api
+.
+get_rpvalue_series
+(
+'RP_Q_PROFIT'
+,
+'20191231'
+)
+>>>
+api
+.
+get_rpvalue_series
+(
+'RP_Q_PROFIT'
+,
+'20190531'
+,
+fill
+=
+True
+,
+universe
+=
+'HS300'
+,
+exclude
+=
+True
+)
+get_factor_summary
+(
+dates
+,
+stock_pool='ALL'
+,
+style=False
+,
+neutral=True
+)
+¶
+(Experimental) 取一段时间内系统公共因子已预先计算好的分组收益表现汇总，返回一个pandas.DataFrame。
+返回结果等同于量化投研平台上的“因子分析——因子表现汇总”中的因子表现数据。
+参数:
+dates
+– 指定一个时间段，格式如‘20210101-20210131’
+stock_pool
+– 选择股票池，可选’ALL’/’HS300’/’ZZ500’/’ZZ1000’/’CYB’
+style
+– 取大类因子数据：True，取细分因子数据：False
+neutral
+– 是否将因子中性化处理, True/False
+返回:
+返回因子表现汇总结果。
+返回类型:
+DataFrame
+or None
+Analyzer - 绩效分析接口
+¶
+class
+gfquant.
+Analyzer
+(
+data_api: gfquant.data_api.DataApi = None
+)
+¶
+绩效分析接口
+portfolio_exposure
+(
+tday: str, portfolio_weights: Union[pandas.core.series.Series, List[pandas.core.series.Series]], bench: str, sector: str = 'LEVEL_1_SW', split_sectors: List[str] = (), alpha_factors: List[str] = None, factor_styles: List[str] = None, portfolio_names=None, sector_fill='median') -> (<class 'pandas.core.frame.DataFrame'>, <class 'pandas.core.frame.DataFrame'>
+)
+¶
+计算一个或多个组合在某一交易日的行业/风格暴露度
+参数:
+tday
+(
+str
+) – 交易日
+portfolio_weights
+(
+pd.Series
+) – 待分析组合的股票权重Series(其index为Wind格式股票代码), 也可以为list of Series
+bench
+(
+str
+) – 基准名称, 可选值：[‘HS300’, ‘ZZ500’, ‘ZZ800’, ‘ZZ1000’, ‘CYBZ’, ‘CYB’, ‘H50’, ‘ZZQZ’, ‘ALL’]
+sector
+(
+str
+) – 行业因子的名称
+split_sectors
+(
+List
+[
+str
+]
+) – 需要拆分为二级行业的一级行业名称列表，如 [‘非银行金融’, ‘电子’]
+alpha_factors
+(
+List
+[
+str
+]
+) – alpha因子名称的列表，默认为所有内置因子
+factor_styles
+(
+List
+[
+str
+]
+) – alpha因子对应的大类名称，默认使用系统内置的大类
+portfolio_names
+(
+str
+or
+List
+[
+str
+]
+) – 待分析组合的名称或名称列表，和portfolio_weights参数对应
+sector_fill
+(
+str
+or
+float
+) – 计算因子暴露时采用的分行业缺失值填充方式，默认’median’，也可用一个数字填充
+返回:
+风格暴露结果、行业暴露结果
+返回类型:
+tuple(pd.DataFrame, pd.DataFrame)
+static
+daily_return_to_nav
+(
+rtn_series
+)
+¶
+日收益序列转换为日净值序列
+参数:
+rtn_series
+(
+pd.Series
+) – 日收益序列, index为日期
+返回:
+日净值序列
+返回类型:
+pd.Series
+static
+nav_drawdown
+(
+nav_series
+,
+name='drawdown'
+,
+summary=True
+,
+dd_threshold=0.0
+)
+¶
+由日净值序列计算历史回撤
+参数:
+nav_series
+(
+pd.Series
+) – 日净值序列, index为日期
+name
+(
+str
+) – 名称，默认为’drawdown’
+summary
+(
+bool
+) – 如为False, 则只返回一个当前回撤的pd.Series; 如为True(默认值), 除了当前回撤Series外还会返回每次回撤的详情(pd.DataFrame);
+dd_threshold
+(
+float
+) – 返回大于此回撤幅度的所有回撤历史(例如0.01 = 1%), 只在summary=True时有效
+返回:
+回撤计算结果
+返回类型:
+pd.Series or tuple(pd.Series, pd.DataFrame)
+daily_return_perf
+(
+daily_rtn
+,
+bench_rtn=None
+,
+turnover=None
+,
+annual_tdays=250
+,
+longest_drawdown=False
+,
+detect_first_day=True
+,
+ret_rtn=False
+)
+¶
+参数:
+daily_rtn
+(
+pd.Series
+) – 组合的日收益序列, index为日期
+bench_rtn
+(
+pd.Series
+) – 基准的日收益序列, index为日期，日期需要与daily_rtn对齐；如为None则没有基准
+turnover
+(
+pd.Series
+) – 组合的日换手率序列, index为日期，日期需要与daily_rtn对齐；如为None则不计算换手率
+annual_tdays
+(
+int
+) – 计算年化时，所用的年化交易日，默认250
+longest_drawdown
+(
+bool
+) – False(默认值)：只计算最大回撤；True：计算最大回撤和持续时间最长的回撤
+detect_first_day
+(
+bool
+) – True(默认值)：如果第一天组合收益为0，那么将基准第一天收益也设置为0；False：不处理第一天的收益
+ret_rtn
+(
+bool
+) – False(默认值)：只返回perf计算结果；True：返回(perf, dict_of_returns)
+返回:
+返回一个或两个变量
+perf：组合绩效计算结果（列）; 如有bench_rtn参数，则返回三列结果：组合、基准、对冲（即每日组合收益减去基准收益累计）
+dict_of_returns (dict): 如参数ret_rtn=True，返回的第二个结果为每周、每月、每年的收益
+返回类型:
+pd.DataFrame or tuple(pd.DataFrame, dict)
+daily_return_annual_perf
+(
+daily_rtn
+,
+bench_rtn=None
+,
+turnover=None
+,
+annual_tdays=250
+,
+summary_annualize=True
+,
+summary_name=None
+,
+conv_func=None
+,
+group_by='year'
+)
+¶
+由日收益序列、基准序列或基准指数代码(可选)、换手率序列(可选)计算分年度和区间年化的统计绩效
+参数:
+daily_rtn
+(
+pd.Series
+) – 日收益序列, index为日期
+bench_rtn
+(
+None
+or
+str
+or
+pd.Series
+) – 基准的日收益序列, index为日期; 或者指定一个指数代码，如‘000300.SH’
+turnover
+(
+None
+or
+pd.Series
+) – 日换手率序列, index为日期
+annual_tdays
+(
+int
+) – 每年交易日数, 计算年化指标时使用
+summary_annualize
+(
+bool
+) – 添加摘要时是否年化, 默认为True(‘区间年化’)
+summary_name
+(
+str
+) – 添加摘要的名称, 默认为’区间年化’
+conv_func
+(
+None
+or
+callable
+) – 每年结果的转换处理函数(可用来设置百分比显示格式等), 默认为None
+group_by
+(
+str
+) – 如是’month’，则返回分月收益
+返回:
+绩效结果
+返回类型:
+pd.DataFrame
+brinson_single
+(
+portfolio_weight: pandas.core.series.Series
+,
+pre_day: str
+,
+end_day: str
+,
+bench: str
+,
+sector='LEVEL_1_SW'
+,
+split_sectors=()
+,
+full_pos=False
+)
+¶
+Brinson归因：单期模型
+参数:
+portfolio_weight
+(
+pd.Series
+) – index为股票代码，values为权重
+pre_day
+– 持仓开始日期（日末持仓）
+end_day
+– 持仓结束日期（至日末）
+bench
+– 基准名称, 可选值：[‘HS300’, ‘ZZ500’, ‘ZZ800’, ‘ZZ1000’, ‘CYBZ’, ‘CYB’, ‘H50’, ‘ZZQZ’, ‘ALL’]
+sector
+– 行业因子的名称, 如’LEVEL_1_CITIC’
+split_sectors
+– 需要拆分为二级行业的一级行业名称列表，如 [‘非银行金融’, ‘电子’]
+full_pos
+– 是否满仓计算, True=将每期调仓权重归一, False=使用原始权重值
+返回:
+列：组合权重 基准权重 组合回报 基准回报 配置效应(行业/择时) 选择效应(选股) 互动效应(可计入选股) 组合超额
+返回类型:
+pd.DataFrame
+brinson_multi
+(
+weight_df: pandas.core.frame.DataFrame
+,
+end_day
+,
+bench: str
+,
+sector='LEVEL_1_SW'
+,
+split_sectors=()
+,
+full_pos=False
+)
+¶
+Brinson归因：多期模型
+参数:
+weight_df
+– 类似PMS调仓格式的DataFrame, 需要用到3列：“调整日期”、“证券代码”、“持仓权重”
+end_day
+– 结束日期（用来计算最后一期持仓的绩效归因）
+bench
+– 基准名称, 可选值：[‘HS300’, ‘ZZ500’, ‘ZZ800’, ‘ZZ1000’, ‘CYBZ’, ‘CYB’, ‘H50’, ‘ZZQZ’, ‘ALL’]
+sector
+– 行业因子的名称, 如’LEVEL_1_CITIC’
+split_sectors
+– 需要拆分为二级行业的一级行业名称列表，如 [‘非银行金融’, ‘电子’]
+full_pos
+– 是否满仓计算, True=将每期调仓权重归一, False=使用原始权重值
+返回:
+多期模型计算的分行业归因结果、每期调仓归因结果的列表
+返回类型:
+(pd.DataFrame, list of dict)
+Next
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

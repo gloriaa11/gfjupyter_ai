@@ -1,0 +1,370 @@
+
+定制回测框架: 单因子模型
+View page source
+定制回测框架: 单因子模型
+¶
+除了平台内置的系统因子外，还可以使用投研平台的“自定义因子”功能自行导入需要测试的因子值，然后使用组合构建参数或组合优化参数生成组合。
+单因子模型
+可以看作是
+Alpha模型
+的只使用一个因子的简化版。
+[1]:
+from
+gfquant
+import
+run_backtest_by_single_factor
+[2]:
+# 策略通用配置参数
+strategy_config
+=
+{
+# 开始日期
+'start_date'
+:
+'20171229'
+,
+# 结束日期
+'end_date'
+:
+'20190416'
+,
+# 调仓日期，还可以是'week_end'/'week_start'/'month_start', list of dates: ['2018-01-12', '2018-01-19', '2019-04-09']
+'rebalance_days'
+:
+'month_end'
+,
+# 买入费用(手续费/滑点/冲击成本..), 如万分之三: 0.0003
+# 'buy_rate': 0,
+# 卖出费用(税/手续费/滑点/冲击成本..), 如千分之一: 0.001
+# 'sell_rate': 0,
+# 每日固定费用(计提管理费/托管费/运营成本..), 如年管理费1% ≈ 0.01/250
+# 'daily_cost': 0,
+}
+# 因子分析参数
+factor_config
+=
+{
+# 被测试因子，名称
+'factor'
+:
+'Q_EP'
+,
+# 选股股票池, 目前支持'HS300'/'ZZ500'/'ZZ800'/'ZZ1000'/'CYB'/'ALL', 或自定义选股池函数
+'universe'
+:
+'HS300'
+,
+# 基准指数, 可选市场上的常见指数代码，或者等权指数(代码为“选股股票池.EQ”)
+'benchmark'
+:
+'000300.SH'
+,
+# 因子预处理参数，用法参见DataApi.get_factor_series()
+'factor_process'
+:
+{
+# 如果当天没有因子数据，是否用更早的数据填充；设置True会略为降低运行速度。例：陆股通因子可设为True，因为香港的交易日不一样，在某些交易日可能因子没有值
+'fill'
+:
+False
+,
+# 剔除规则，每一个True都会增加一个处理步骤
+'exclude'
+:
+True
+,
+# 'exclude': {
+#     # 剔除新股：True为剔除上市不满120交易日的股票，False或0为不剔除。也可以指定具体的数值，如100
+#     'no_new': True,
+#     # 剔除ST
+#     'no_st': True,
+#     # 剔除停牌
+#     'no_suspend': True,
+# },
+# 因子中性化规则，每一个True都会增加一个处理步骤
+'neutral'
+:
+False
+,
+# 'neutral': {
+#     # 取自然对数
+#     'log': False,
+#     # 去极值(MAD方式)
+#     'outlier': True,
+#     # 填补缺失值中性化处理时填充缺失值的规则，默认'median'(中位数填充)，可选None(不填充), 'mean', 'max', 'min'或一个具体数值，如0
+#     'sector_fill': True,
+#     # 中性化处理时，是否做行业中性化，行业默认使用'LEVEL_1_CITIC'，如不做行业中性化则可设置为False
+#     'sector_neu': True,
+#     # 中性化处理时，是否做市值中性化，市值默认使用'MV'的自然对数，如不做市值中性化则可设置为False
+#     'size_neu': True,
+#     # zscore标准化
+#     'zscore': True,
+# }
+},
+# 是否在调仓日计算因子的IC
+'calc_ic'
+:
+False
+,
+# 组合是否保留涨停股票，默认剔除涨停股票(即False)
+'keep_uplimit'
+:
+False
+,
+# 因子方向，只能为1(正向)或-1(负向)
+'direction'
+:
+1
+,
+}
+# 组合构建参数
+portfolio_construct_conf
+=
+{
+# 是否使用组合优化器构建组合。
+# False: 使用'portfolio_weighting_params'参数; True: 使用'portfolio_optimizing_params'参数
+'use_optimization'
+:
+False
+,
+# 组合构建参数，其中'weighting'默认值为'equal'，其余配置项的默认值为None或False。支持分行业/个股两步配权
+# 参数说明参见“文档”中的“API Reference —— DataApi —— portfolio_weighting”
+# 组合构建接口的用法参见文档中的“组合构建接口”说明
+'portfolio_weighting_params'
+:
+{
+# 股票权重分配，支持'equal'(等权)或者另一个作为权重的因子名称，如'FFMV'即为自由流通市值加权
+'weighting'
+:
+'FFMV'
+,
+# 选择前n个股票；如果'sector_first'=True，则在每个行业里选择前n个股票
+'top_n'
+:
+None
+,
+# 选择前(pct*100)%个股票；如果'sector_first'=True，则在每个行业里选择前(pct*100)%个股票(四舍五入)
+'top_pct'
+:
+0.2
+,
+# 是否分行业配权重，如为False, 则它以下的参数都不生效
+'per_sector_weighting'
+:
+True
+,
+# 先设定行业权重, False:先选股票再按行业配权重; True:先定行业权重再选股再配权重
+'sector_first'
+:
+False
+,
+# 行业权重基准: 基准权重因子名称
+'bench'
+:
+'WEIGHT_300'
+,
+# 行业权重: 一级行业因子名称
+'sector'
+:
+'LEVEL_1_SW'
+,
+# 需要拆分为二级行业的一级行业名称列表
+'split_sectors'
+:
+[
+'非银金融'
+],
+# 行业权重偏离，支持dict和pd.Series；被拆分的一级行业不能配置，应指定对应二级行业的值
+'sector_deviation'
+:
+{
+'建筑材料'
+:
+-
+0.03
+,
+'家用电器'
+:
+0.06
+},
+},
+# 组合优化参数: 调用组合优化函数 DataApi.portfolio_optimize, 该函数参数通过一个dict配置
+# 参数说明参见文档中的“API Reference —— DataApi —— portfolio_optimize”
+# 组合优化接口的用法参见文档中的“组合优化接口”说明
+'portfolio_optimizing_params'
+:
+{
+# 基准权重因子名称
+'bench'
+:
+'WEIGHT_300'
+,
+# 限制组合的行业暴露度，如不限制行业可以设置 sector=None
+'sector'
+:
+'LEVEL_1_CITIC'
+,
+# 一级行业因子名称
+'split_sectors'
+:
+[
+'非银行金融'
+],
+# 需要拆分为二级行业的一级行业名称列表
+'sect_exp_min'
+:
+-
+0.0
+,
+'sect_exp_max'
+:
+0.0
+,
+# 单独设置每个行业的暴露度在'sect_exp_min'和'sect_exp_max'基础上的偏离，支持dict和pd.Series
+'sect_exp_min_deviation'
+:
+{
+'房地产'
+:
+0.01
+,
+'传媒'
+:
+-
+0.01
+},
+'sect_exp_max_deviation'
+:
+{
+'房地产'
+:
+0.05
+},
+# 限制组合的风格因子暴露度，可选'default'(市值) 或'barra'(10个Barra风格因子)，或者自定义的风格因子
+'style_factors'
+:
+'barra'
+,
+'style_exp_min'
+:
+-
+0.0
+,
+'style_exp_max'
+:
+0.0
+,
+# 单独设置每个风格因子的暴露度'style_exp_min'和'style_exp_max'基础上的偏离，市值因子名称为'LNMV'
+'style_exp_min_deviation'
+:
+{
+'BARRA_BTOP'
+:
+0.02
+},
+'style_exp_max_deviation'
+:
+{
+'BARRA_BTOP'
+:
+0.08
+,
+'BARRA_MOMENTUM'
+:
+0.01
+,
+'BARRA_GROWTH'
+:
+0.02
+},
+# 个股的相对权重和绝对权重限制
+'rel_weight_min'
+:
+None
+,
+'rel_weight_max'
+:
+0.02
+,
+'abs_weight_min'
+:
+0.0
+,
+'abs_weight_max'
+:
+0.1
+,
+'bench_pct'
+:
+0.8
+,
+'turnover_max'
+:
+2.0
+,
+# 组合换手率上限(单次调仓)
+'trackerr_max'
+:
+1.0
+,
+# 组合跟踪误差上限
+# 结果中个股数量和权重的限制（被剔除股票的权重将按比例分配给组合中留下来的股票）
+'result_stock_count'
+:
+None
+,
+'result_weight_min'
+:
+0.001
+,
+'result_weight_sum'
+:
+0.9999
+,
+# 如果用到Barra因子但当日没有值，是否取前值填充
+'fill_barra'
+:
+False
+,
+},
+}
+report
+=
+run_backtest_by_single_factor
+(
+strategy_config
+,
+factor_config
+,
+portfolio_construct_conf
+)
+{{progress_text}}
+累积净值
+超额收益
+相对净值
+周度收益
+月度收益
+平均收益
+年化换手
+Nav
+Excess
+Relative Nav
+Weekly Return
+Monthly Return
+Average Excess Return
+Annualized Turnover
+{{log}}
+[3]:
+report
+[3]:
+BackTest.Report(keys=['annual_perf', 'cash', 'holdings', 'portfolio', 'rtn_average', 'rtn_month', 'rtn_week', 'trades', 'turnover_annualized', 'user_context'])
+Next
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

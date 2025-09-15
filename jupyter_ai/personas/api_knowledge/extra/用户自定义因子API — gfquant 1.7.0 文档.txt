@@ -1,0 +1,231 @@
+
+»
+用户自定义因子API
+View page source
+用户自定义因子API
+¶
+UserApi - 自定义因子操作接口
+¶
+class
+gfquant_user.
+UserApi
+(
+token: str
+,
+timeout: int = 888
+,
+**kwargs
+)
+¶
+用户操作自定义因子的程序接口，也可以取公共因子的值。
+参数:
+token
+– 请到“投研平台——量化研究——因子库——自定义因子——API导入”里查看和修改自己的token
+**kwargs
+– 备用参数
+实际案例
+>>>
+from
+gfquant_user
+import
+UserApi
+>>>
+api
+=
+UserApi
+(
+token
+=
+'f91516a5-a513-4bca-8492-1dab9af0e776'
+)
+# 需要替换为自己的token
+sys_factors
+¶
+系统中公共的细分因子列表。
+返回:
+公共因子列表
+返回类型:
+list
+get_factor_info
+(
+)
+¶
+取当前用户的自定义因子信息表
+返回:
+因子信息表
+返回类型:
+DataFrame
+get_readable_factor_info
+(
+)
+¶
+取当前用户有读取权限的自定义因子信息表，包括系统中的公共因子、当前用户的所有自定义因子和其他用户公开的自定义因子。
+返回:
+因子信息表
+返回类型:
+DataFrame
+create_factor
+(
+factor_name: str
+,
+description: str = None
+,
+direction: str = '无'
+,
+is_public: str = 'N'
+)
+¶
+创建一个自定义因子。
+参数:
+factor_name
+– 因子名称
+description
+– 因子描述
+direction
+– 因子方向，”正向/负向/无”
+is_public
+– 是否公开，”Y/N”
+返回:
+None
+delete_factor
+(
+factor_name: str
+)
+¶
+删除一个自定义因子。
+参数:
+factor_name
+– 因子名称
+返回:
+None
+import_factor_value
+(
+factor_name: str
+,
+df_value: pandas.core.frame.DataFrame
+,
+create_factor: bool = False
+,
+split: int = 1000000
+)
+¶
+导入自定义因子数据。导入时间可能比较长，期间不定时会有日志信息print输出，请耐心等待。
+参数:
+factor_name
+– 因子名称
+df_value
+(
+DataFrame
+) – 格式为3列（columns=[‘日期’, ‘股票代码’, ‘因子值’]），列数据为[str, str, float]
+create_factor
+– 如果因子名称不存在，是否尝试创建一个自定义因子，True/False
+split
+– 如df_value的行数大于split的值，则会分批导入。
+返回:
+None
+实际案例
+>>>
+# 导入因子值df_value的格式参考：
+>>>
+df_fac
+=
+pd
+.
+DataFrame
+([
+['20210421', '000001.SZ', 1.1111],
+['20210421', '000002.SZ', 1.2222],
+['20210421', '600519.SH', 1.3333],
+['20210421', '300001.SZ', 1.4444],
+['20210421', '600003.SH', 1.5555],
+['20210421', '600360.SH', 1.6666],
+], columns=['日期', '股票代码', '因子值'])
+>>>
+api
+=
+UserApi
+(
+token
+=
+'f91516a5-a513-4bca-8492-1dab9af0e776'
+)
+# 需要替换为自己的token
+>>>
+api
+.
+import_factor_value
+(
+'MyCustomFactor'
+,
+df_fac
+,
+create_factor
+=
+True
+)
+delete_factor_value
+(
+factor_name: str
+,
+dates: str
+,
+wind_codes: Union[None
+,
+List[str]] = None
+)
+¶
+删除自定义因子在某个日期范围内的值。如需删除某个自定义因子的全部值，可以用
+delete_factor()
+参数:
+factor_name
+– 因子名称
+dates
+– 日期范围，格式如 ‘20210421-20210422’
+wind_codes
+– 只删除日期范围内某些股票代码对应的因子值，格式如 [‘000001.SZ’, ‘600519.SH’]，None为删除所有
+返回:
+None
+get_factor_value
+(
+factor_name: str
+,
+dates: str
+,
+wind_codes: Union[None
+,
+List[str]] = None
+)
+¶
+取因子值，系统因子和自定义因子的值都可以取。
+注意
+:
+get_factor_value()
+即使是取当前用户的自定义因子，也必须使用 ‘
+user
+.factor_name’ 的形式，这是为了避免歧义。
+参数:
+factor_name
+– 因子名称，系统因子用 ‘FACTOR_NAME’ 形式，自定义因子必须使用 ‘
+user
+.factor_name’ 的形式（包括当前用户的自定义因子）
+dates
+– 日期范围，格式如 ‘20210421-20210422’
+wind_codes
+– 只取日期范围内某些股票代码对应的因子值，格式如 [‘000001.SZ’, ‘600519.SH’]
+返回:
+因子值，index为日期，columns为股票代码，和
+gfquant.DataApi.get_factor()
+的结果格式一致（但
+get_factor_value()
+取数速度相对较慢）
+返回类型:
+DataFrame
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

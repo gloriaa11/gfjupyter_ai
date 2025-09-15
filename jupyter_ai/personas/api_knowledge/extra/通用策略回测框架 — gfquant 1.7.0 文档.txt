@@ -1,0 +1,459 @@
+
+通用策略回测框架
+View page source
+通用策略回测框架
+¶
+gfquant提供了一个通用的策略回测框架，可以用来编写各种策略，是回测平台中的最灵活的策略编写方式，后面的几个“定制回测框架”都是在通用框架基础上定制编写。
+回测框架的接口
+¶
+编写一个回测策略需要实现以下接口：
+config
+: 必须；一个Python dict, 定义了回测策略运行的基本配置
+run_daily(bt)
+: 必须；一个函数，在回测的每个交易日中运行，可以在里面生成组合，进行调仓
+init(bt)
+: 可选；一个函数，在回测的开始之前运行一次，可以在里面做一些初始化工作
+finished(bt)
+: 可选；一个函数，在回测成功结束后运行一次，可以在里面做一些收尾的工作
+上述三个函数均只接受一个参数：
+bt
+，它是一个
+gfquant.BackTest
+的实例，代表了正在运行的回测策略，在回测过程中(即
+run_daily
+等函数中)可调用
+bt
+的函数实现取因子值和交易调仓等操作。
+BackTest的实例对象
+¶
+BackTest的主要功能如下：
+bt.today
+是回测当前运行到的交易日期
+bt.api
+是一个
+gfquant.DataApi
+数据接口的实例，它比一般的DataApi接口多一个限制：不可以取日期大于
+bt.today
+的数据
+bt.log
+是一个Python的日志对象，用它来输出的日志默认带有回测日期和运行时间等信息
+bt.user
+是一个用户上下文对象(
+BackTest.UserContext
+)，该对象是可以任意设置属性，整个策略回测过程在上述三个函数中都可以访问到它的属性，可以用作全局变量的存放处
+bt.is_(first/last)_tday_in_(week/month/year)
+函数，用来简单判断当前日期是否是每周/月/年的第一天/最后一天，如
+bt.is_last_day_in_month()
+bt.order*
+函数为调仓接口
+更详细的用法请参考
+API Reference
+小节的
+策略回测API
+⬅ 点击链接查看
+下面通过几个实例来说明如何使用通用策略回测框架来编写一个回测。
+如果觉得上面的描述不好理解，先看下面实例。
+最简单的回测
+¶
+实现一个最简单的回测是怎样的？在
+config
+里只定开始时间、结束时间和基准、定义
+run_daily(bt)
+函数但不做任何事情。
+注：运行回测的Notebook Cell需要以
+%%bt
+开头，该单元格里的回测代码将被直接运行。
+回测的结果显示在单元格下方的输出区域，包含了以下部分：
+策略绩效及收益图表，可用鼠标进行交互
+策略分年度绩效统计表(运行结束后显示)
+策略输出的运行日志(如有)
+[1]:
+%%
+bt
+config = {
+'start_date': '20171229',
+'end_date': '20190416',
+'benchmark': '000300.SH',
+}
+def run_daily(bt):
+pass
+{{progress_text}}
+累积净值
+超额收益
+相对净值
+周度收益
+月度收益
+平均收益
+年化换手
+Nav
+Excess
+Relative Nav
+Weekly Return
+Monthly Return
+Average Excess Return
+Annualized Turnover
+{{log}}
+第二个回测
+¶
+策略描述：在沪深300中取Q_EP因子值最大的60只股票，按照自由流通市值(FFMV)加权，每月的最后一个交易日调仓。
+结果如下，可以从log日志中看到几个接口函数的被调用情况。
+[2]:
+%%
+bt
+# 策略参数配置
+config = {
+'start_date': '20171229',
+'end_date': '20190531',
+'benchmark': '000300.SH',
+}
+# 初始化函数设置一个计数器值并输出一条日志
+def init(bt):
+bt.user.counter = 0
+bt.log.info('init')
+# 该策略函数在沪深300成分股中取Q_EP因子值最大的60只股票(剔除新股/停牌/ST股票)，按照自由流通市值(FFMV)加权；在每月的最后一个交易日调仓。
+def run_daily(bt):
+if bt.is_last_tday_in_month():
+fac = bt.api.get_factor_series('Q_EP', bt.today, neutral=True, universe='HS300', exclude=True)
+select = fac.dropna().sort_values()[-60:]
+ref_weight = bt.api.get_factor_series('FFMV', bt.today, select.index)
+weight = ref_weight / ref_weight.sum() * 0.99999
+bt.order_portfolio_weight(weight.index, weight.values)
+bt.user.counter += 1
+bt.log.info(f'第{bt.user.counter}次调仓')
+# 结束函数输出一条日志
+def finished(bt):
+bt.log.info(f'finished, 共调仓{bt.user.counter}次')
+{{progress_text}}
+累积净值
+超额收益
+相对净值
+周度收益
+月度收益
+平均收益
+年化换手
+Nav
+Excess
+Relative Nav
+Weekly Return
+Monthly Return
+Average Excess Return
+Annualized Turnover
+{{log}}
+获取回测结果
+¶
+最后一次回测结果保存在report变量中，可以在notebook里方便地查看里面的内容。如果想存到另一个变量名里，则可用
+%%bt
+-o
+my_report_1
+，这样回测结束后结果就在my_report_1变量里。
+注意：本文所述的是通用策略回测框架的结果。在后面说明的“定制回测框架”里，回测结果就是调用定制回测函数返回的结果。
+[3]:
+report
+[3]:
+BackTest.Report(keys=['annual_perf', 'holdings', 'portfolio', 'rtn_average', 'rtn_month', 'rtn_week', 'trades', 'turnover_annualized', 'user_context'])
+[4]:
+report
+.
+portfolio
+.
+tail
+()
+[4]:
+value
+rtn
+nav
+bench_rtn
+turnover
+date
+2019-05-27
+1.024218e+08
+0.014961
+1.024218
+0.012043
+0.000000
+2019-05-28
+1.033377e+08
+0.008943
+1.033377
+0.009640
+0.000000
+2019-05-29
+1.027253e+08
+-0.005925
+1.027253
+-0.002274
+0.000000
+2019-05-30
+1.021012e+08
+-0.006076
+1.021012
+-0.006203
+0.000000
+2019-05-31
+1.017689e+08
+-0.003255
+1.017689
+-0.003129
+0.311038
+下面是取某一天持仓和交易数据的例子
+[5]:
+report
+.
+holdings
+.
+loc
+[
+report
+.
+holdings
+[
+'date'
+]
+==
+'2019-03-29'
+]
+.
+sort_values
+(
+'weight'
+,
+ascending
+=
+False
+)
+.
+head
+()
+[5]:
+date
+code
+shares
+price
+weight
+18112
+2019-03-29
+601318.SH
+402502.153376
+77.10
+0.294209
+18063
+2019-03-29
+000651.SZ
+176887.336362
+47.21
+0.079171
+18103
+2019-03-29
+600900.SH
+260089.224480
+16.87
+0.041598
+18114
+2019-03-29
+601668.SH
+714083.512124
+6.12
+0.041432
+18113
+2019-03-29
+601601.SH
+112447.932681
+34.04
+0.036289
+[6]:
+report
+.
+trades
+.
+loc
+[
+report
+.
+trades
+[
+'date'
+]
+==
+'2019-03-29'
+]
+.
+head
+()
+[6]:
+date
+code
+trade_quantity
+price
+trade_type
+1084
+2019-03-29
+000069.SZ
+-171535.371310
+7.70
+清仓
+1085
+2019-03-29
+000338.SZ
+1956.735552
+11.85
+增仓
+1086
+2019-03-29
+000415.SZ
+1189.155232
+4.65
+增仓
+1087
+2019-03-29
+000423.SZ
+18328.371270
+47.45
+建仓
+1088
+2019-03-29
+000651.SZ
+3046.240475
+47.21
+增仓
+策略在回测过程中或结束后统一取股票名称和所属行业会明显拖慢回测速度，因此取结果的名称和行业作为一个函数提供，可按需调用。如果数据较多，调用后可能需要等待一下才能看到结果。
+接口定义如下：
+report._get_holdings2(day,
+sector='LEVEL_1_CITIC')
+如
+day=None
+, 则更新全部持仓历史的股票名称和行业信息
+report._get_trade2(day,
+sector='LEVEL_1_CITIC')
+如
+day=None
+, 则更新全部交易流水的股票名称和行业信息
+[7]:
+report
+.
+_get_holdings2
+(
+'2019-03-29'
+)
+.
+head
+()
+[7]:
+date
+code
+shares
+price
+weight
+name
+level_1_citic
+18060
+2019-03-29
+000338.SZ
+170011.572946
+11.85
+0.019100
+潍柴动力
+汽车
+18061
+2019-03-29
+000415.SZ
+69051.180687
+4.65
+0.003044
+渤海租赁
+非银行金融
+18062
+2019-03-29
+000423.SZ
+18328.371270
+47.45
+0.008245
+东阿阿胶
+医药
+18063
+2019-03-29
+000651.SZ
+176887.336362
+47.21
+0.079171
+格力电器
+家电
+18064
+2019-03-29
+000703.SZ
+44049.157601
+15.33
+0.006402
+恒逸石化
+石油石化
+[8]:
+report
+.
+_get_trades2
+(
+'2019-03-29'
+,
+sector
+=
+'LEVEL_2_SW'
+)
+.
+head
+()
+[8]:
+date
+code
+trade_quantity
+price
+trade_type
+name
+level_2_sw
+1084
+2019-03-29
+000069.SZ
+-171535.371310
+7.70
+清仓
+华侨城A
+房地产开发Ⅱ
+1085
+2019-03-29
+000338.SZ
+1956.735552
+11.85
+增仓
+潍柴动力
+汽车零部件Ⅱ
+1086
+2019-03-29
+000415.SZ
+1189.155232
+4.65
+增仓
+渤海租赁
+多元金融Ⅱ
+1087
+2019-03-29
+000423.SZ
+18328.371270
+47.45
+建仓
+东阿阿胶
+中药Ⅱ
+1088
+2019-03-29
+000651.SZ
+3046.240475
+47.21
+增仓
+格力电器
+白色家电
+Next
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

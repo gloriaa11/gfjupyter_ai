@@ -1,0 +1,31 @@
+
+     active environment : myconda
+    active env location : D:\Anaconda3\envs\myconda
+            shell level : 1
+       user config file : C:\Users\dc-develop-2\.condarc
+ populated config files : 
+          conda version : 4.5.4
+    conda-build version : 3.10.5
+         python version : 3.6.5.final.0
+       base environment : D:\Anaconda3  (writable)
+           channel URLs : https://repo.anaconda.com/pkgs/main/win-64
+                          https://repo.anaconda.com/pkgs/main/noarch
+                          https://repo.anaconda.com/pkgs/free/win-64
+                          https://repo.anaconda.com/pkgs/free/noarch
+                          https://repo.anaconda.com/pkgs/r/win-64
+                          https://repo.anaconda.com/pkgs/r/noarch
+                          https://repo.anaconda.com/pkgs/pro/win-64
+                          https://repo.anaconda.com/pkgs/pro/noarch
+                          https://repo.anaconda.com/pkgs/msys2/win-64
+                          https://repo.anaconda.com/pkgs/msys2/noarch
+          package cache : D:\Anaconda3\pkgs
+                          C:\Users\dc-develop-2\AppData\Local\conda\conda\pkgs
+       envs directories : D:\Anaconda3\envs
+                          C:\Users\dc-develop-2\AppData\Local\conda\conda\envs
+                          C:\Users\dc-develop-2\.conda\envs
+               platform : win-64
+             user-agent : conda/4.5.4 requests/2.27.1 CPython/3.6.5 Windows/10 Windows/10.0.18362
+          administrator : False
+             netrc file : None
+           offline mode : False
+

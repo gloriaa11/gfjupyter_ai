@@ -1,0 +1,95 @@
+
+»
+回测平台简介
+View page source
+回测平台简介
+¶
+量化回测平台
+¶
+回测平台由量化投资部开发，使用Python语言和Jupyter Notebook运行环境，使用者需要有Python编程基础并熟悉Jupyter Notebook的基本操作，本使用手册不包含相关基础知识的介绍。
+[1]:
+import
+sys
+import
+numpy
+as
+np
+import
+pandas
+as
+pd
+import
+gfquant
+print
+(
+'Python Version:'
+,
+sys
+.
+version
+.
+split
+()[
+0
+])
+print
+(
+'Numpy Version:'
+,
+np
+.
+__version__
+)
+print
+(
+'Pandas Version:'
+,
+pd
+.
+__version__
+)
+print
+(
+'回测平台(GFQuant)版本:'
+,
+gfquant
+.
+__version__
+)
+Python Version: 3.7.3
+Numpy Version: 1.16.4
+Pandas Version: 0.24.2
+回测平台(GFQuant)版本: 1.4.0
+使用Jupyter Notebook
+¶
+Jupyter Notebook是基于网页的用于交互计算的应用程序，可被应用于全过程计算：开发、文档编写、运行代码和展示结果。
+量化回测平台的访问地址：
+http://quant.gffunds.com.cn
+或者
+http://10.88.102.110
+, 只能在公司内访问，使用OA用户名和密码登录。
+使用提示：
+量化回测平台本身的package和依赖包已经安装在回测环境里，不需要用户做任何配置
+Notebook文件(
+.ipynb
+)支持在现代浏览器中运行，如使用IE浏览器，请注意不要打开兼容模式
+登录回测平台后应该能显示类似下图中的列表页面(第一次登录列表为空)
+数据上传和下载
+¶
+在Jupyter Notebook的列表页面，点击列表右上角的“Upload”按钮即可上传本电脑的文件到Notebook服务器上
+在Jupyter Notebook的列表页面，勾选列表上的一个文件，再选择列表左上角的“Download”按钮即可下载到本地
+运行文档中的例子
+¶
+本文档中的大部分页面支持在回测平台中直接运行！
+使用方法: 如果在页面右上角看到“在Notebook中运行”的链接，点击即可复制一份到个人notebook目录下运行。
+Welcome to gfquant! 点击“Next”按钮继续查看下一篇文档。
+Next
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

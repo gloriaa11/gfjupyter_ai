@@ -1,0 +1,636 @@
+
+定制回测框架: 因子分组分析
+View page source
+定制回测框架: 因子分组分析
+¶
+单因子分组分析需要import一个函数（如下），因子分析的回测结果包含了每个分组的持仓信息和统计信息。
+[1]:
+from
+gfquant
+import
+run_analyze_single_factor
+基本配置参数
+¶
+运行单因子检验回测，至少需要配置如下必选参数：
+开始日期、结束日期、调仓日期
+因子名称、分组数、权重分配方式、选股股票池、基准指数
+只使用基本配置参数的因子分组分析实例
+下面的例子使用了“BARRA_SIZE”因子，该因子已经过标准化处理，无需再做因子处理，可以只配置必须的参数即可。
+注意：下例中不作任何剔除，但分组股票数之和可能不等于300，是因为构建分组的组合时默认会剔除涨停股票(即
+keep_uplimit=False
+)
+[2]:
+# 策略通用配置参数
+strategy_config
+=
+{
+'start_date'
+:
+'20171229'
+,
+'end_date'
+:
+'20190416'
+,
+'rebalance_days'
+:
+'month_end'
+,
+}
+# 因子分析参数
+factor_config
+=
+{
+'factor'
+:
+'BARRA_SIZE'
+,
+'group_n'
+:
+5
+,
+'weighting'
+:
+'equal'
+,
+'universe'
+:
+'HS300'
+,
+'benchmark'
+:
+'HS300.EQ'
+,
+}
+report1
+=
+run_analyze_single_factor
+(
+strategy_config
+,
+factor_config
+)
+{{progress_text}}
+累积净值
+超额收益
+相对净值
+周度收益
+月度收益
+平均收益
+年化换手
+Nav
+Excess
+Relative Nav
+Weekly Return
+Monthly Return
+Average Excess Return
+Annualized Turnover
+{{log}}
+可选配置参数
+¶
+如果因子需要先做标准化处理或设置其他策略参数，则需配置可选参数。
+下面是一个需要进行默认因子标准化处理的因子分组分析实例
+本例中使用了“Q_EP”因子，该因子为原始值，需要先经过标准化处理，再做分组分析。下面在参数“factor_process”中配置剔除新股/ST/停牌(
+exclude=True
+)、使用默认标准化参数(
+neutral=True
+)即可。
+[3]:
+# 策略通用配置参数
+strategy_config
+=
+{
+'start_date'
+:
+'20171229'
+,
+'end_date'
+:
+'20190416'
+,
+'rebalance_days'
+:
+'month_end'
+,
+}
+# 因子分析参数
+factor_config
+=
+{
+'factor'
+:
+'Q_EP'
+,
+'group_n'
+:
+5
+,
+'weighting'
+:
+'equal'
+,
+'universe'
+:
+'HS300'
+,
+'benchmark'
+:
+'HS300.EQ'
+,
+'factor_process'
+:
+{
+'exclude'
+:
+True
+,
+'neutral'
+:
+True
+,
+}
+}
+report
+=
+run_analyze_single_factor
+(
+strategy_config
+,
+factor_config
+)
+{{progress_text}}
+累积净值
+超额收益
+相对净值
+周度收益
+月度收益
+平均收益
+年化换手
+Nav
+Excess
+Relative Nav
+Weekly Return
+Monthly Return
+Average Excess Return
+Annualized Turnover
+{{log}}
+完整的分组分析策略配置模板
+包含全部参数的模板如下，请参考代码中的注释。其中“factor_process”参数中的几个配置直接对应着
+DataApi.get_factor_series(expect_rtn_series, day, ..)
+的参数，“keep_uplimit”参数表示分组构建组合时是否保留当天涨停股票。
+[4]:
+# 策略通用配置参数
+strategy_config
+=
+{
+# 开始日期
+'start_date'
+:
+'20171229'
+,
+# 结束日期
+'end_date'
+:
+'20190416'
+,
+# 调仓日期，还可以是'week_end'/'week_start'/'month_start', list of dates: ['2018-01-12', '2018-01-19', '2019-04-09']
+'rebalance_days'
+:
+'month_end'
+,
+# 买入费用(手续费/滑点/冲击成本..), 如万分之三: 0.0003
+'buy_rate'
+:
+0
+,
+# 卖出费用(税/手续费/滑点/冲击成本..), 如千分之一: 0.001
+'sell_rate'
+:
+0
+,
+# 每日固定费用(计提管理费/托管费/运营成本..), 如年管理费1% ≈ 0.01/250
+'daily_cost'
+:
+0
+,
+}
+# 因子分析参数
+factor_config
+=
+{
+# 被测试因子，名称
+'factor'
+:
+'Q_EP'
+,
+# 分组数
+'group_n'
+:
+5
+,
+# 权重分配
+'weighting'
+:
+'equal'
+,
+# 'FFMV',
+# 选股股票池, 目前支持'HS300'/'ZZ500'/'ZZ800'/'ZZ1000'/'CYB'/'ALL', (*) 自定义选股池(DataFrame或callable)
+'universe'
+:
+'HS300'
+,
+# 基准指数, 可选市场上的常见指数代码，或者等权指数(代码为“选股股票池.EQ”)
+'benchmark'
+:
+'HS300.EQ'
+,
+# 因子预处理参数，用法参见DataApi.get_factor_series()
+'factor_process'
+:
+{
+# 如果当天没有因子数据，是否用更早的数据填充；设置True会略为降低运行速度。例：陆股通因子可设为True，因为香港的交易日不一样，在某些交易日可能因子没有值
+'fill'
+:
+False
+,
+# 剔除规则，每一个True都会增加一个处理步骤
+# 'exclude': True,
+'exclude'
+:
+{
+# 剔除新股：True为剔除上市不满120交易日的股票，False或0为不剔除。也可以指定具体的数值，如100
+'no_new'
+:
+True
+,
+# 剔除ST
+'no_st'
+:
+True
+,
+# 剔除停牌
+'no_suspend'
+:
+True
+,
+},
+# 因子中性化规则，每一个True都会增加一个处理步骤
+# 'neutral': True,
+'neutral'
+:
+{
+# 取自然对数
+'log'
+:
+False
+,
+# 去极值(MAD方式)
+'outlier'
+:
+True
+,
+# 填补缺失值中性化处理时填充缺失值的规则，默认'median'(中位数填充)，可选None(不填充), 'mean', 'max', 'min'或一个具体数值，如0
+'sector_fill'
+:
+True
+,
+# 中性化处理时，是否做行业中性化，行业默认使用'LEVEL_1_CITIC'，如不做行业中性化则可设置为False
+'sector_neu'
+:
+True
+,
+# 中性化处理时，是否做市值中性化，市值默认使用'MV'的自然对数，如不做市值中性化则可设置为False
+'size_neu'
+:
+True
+,
+# zscore标准化
+'zscore'
+:
+True
+,
+}
+},
+# 构建组合时，是否保留涨停股票，默认剔除涨停股票(即False)
+'keep_uplimit'
+:
+False
+,
+# 因子方向，只能为1(正向)或-1(负向)
+'direction'
+:
+1
+,
+}
+report
+=
+run_analyze_single_factor
+(
+strategy_config
+,
+factor_config
+)
+{{progress_text}}
+累积净值
+超额收益
+相对净值
+周度收益
+月度收益
+平均收益
+年化换手
+Nav
+Excess
+Relative Nav
+Weekly Return
+Monthly Return
+Average Excess Return
+Annualized Turnover
+{{log}}
+分组的回测结果
+¶
+在策略报告中，因为已分为n个分组，所以分组的组合信息(sub_portfolios)为
+list
+、持仓和调仓记录(sub_holdings和sub_trades)为
+dict
+，对应普通回测的portfolio和holdings/trades。
+[5]:
+report
+[5]:
+BackTest.Report(keys=['cash', 'group_perf', 'rtn_average', 'rtn_month', 'rtn_week', 'sub_cash', 'sub_holdings', 'sub_portfolios', 'sub_trades', 'turnover_annualized', 'user_context'])
+[6]:
+# 对应的取持仓函数也需要第二个参数，即分组id，1为Min组
+report
+.
+_get_holdings2
+(
+'20180416'
+,
+1
+)
+.
+head
+()
+[6]:
+portfolio_id
+date
+code
+shares
+price
+weight
+name
+level_1_citic
+3898
+1
+2018-04-16
+000157.SZ
+80390.254362
+4.17
+0.017681
+中联重科
+机械
+3899
+1
+2018-04-16
+000503.SZ
+8579.036017
+44.11
+0.019959
+海虹控股
+医药
+3900
+1
+2018-04-16
+000559.SZ
+38856.827883
+8.40
+0.017215
+万向钱潮
+汽车
+3901
+1
+2018-04-16
+000627.SZ
+43839.763065
+7.77
+0.017966
+天茂集团
+非银行金融
+3902
+1
+2018-04-16
+000671.SZ
+43953.632580
+7.48
+0.017341
+阳光城
+房地产
+[7]:
+# 因子分组分析框架的特定报告内容
+report
+.
+user_context
+[7]:
+BackTest.UserContext(keys=['factor', 'factor_direction', 'factor_month_df', 'factor_week_df', 'ic_monthly', 'ic_weekly', 'keep_uplimit', 'process_params', 'reb_days', 'rebalance_days', 'universe'])
+[8]:
+# 因子标准化处理参数
+report
+.
+user_context
+.
+process_params
+[8]:
+{'fill': False,
+'exclude': {'no_new': True, 'no_st': True, 'no_suspend': True},
+'neutral': {'log': False,
+'outlier': True,
+'sector_fill': True,
+'sector_neu': True,
+'size_neu': True,
+'zscore': True}}
+[9]:
+# 月度IC
+report
+.
+user_context
+.
+ic_monthly
+.
+head
+()
+[9]:
+date
+from_date
+rank_ic
+0
+2018-01-31
+2017-12-29
+0.141132
+1
+2018-02-28
+2018-01-31
+0.075557
+2
+2018-03-30
+2018-02-28
+-0.130599
+3
+2018-04-27
+2018-03-30
+0.016000
+4
+2018-05-31
+2018-04-27
+0.046912
+[10]:
+# 标准化处理后的因子值(月度)
+report
+.
+user_context
+.
+factor_month_df
+.
+tail
+()
+[10]:
+000001.SZ
+000002.SZ
+000008.SZ
+000060.SZ
+000063.SZ
+000069.SZ
+000100.SZ
+000157.SZ
+000166.SZ
+000333.SZ
+...
+600004.SH
+600027.SH
+600566.SH
+600760.SH
+600998.SH
+601066.SH
+601138.SH
+603156.SH
+603259.SH
+603986.SH
+2018-12-28
+0.035449
+-0.697498
+NaN
+NaN
+-1.001577
+1.536489
+1.004648
+0.319108
+0.471281
+-0.141798
+...
+-0.925051
+-0.737608
+0.875329
+0.000078
+-0.139774
+-0.215884
+0.269675
+0.408875
+-0.445864
+-0.767454
+2019-01-31
+0.043479
+-0.855706
+NaN
+NaN
+-1.019293
+1.694044
+0.871829
+0.280714
+0.418824
+-0.220861
+...
+-1.005018
+-0.637338
+0.839760
+-0.018946
+-0.188995
+-0.408106
+0.338481
+0.617618
+-0.474926
+-0.918425
+2019-02-28
+0.022957
+-0.580497
+NaN
+NaN
+-1.066989
+1.620386
+0.741592
+0.338630
+-0.022716
+-0.230903
+...
+-0.940759
+-0.525333
+1.118823
+-0.000301
+-0.053507
+-0.571479
+0.228146
+0.563940
+-0.500874
+-0.807016
+2019-03-29
+-0.794779
+0.515639
+NaN
+NaN
+-1.207236
+0.591418
+0.428094
+0.189188
+0.097087
+0.032940
+...
+-0.828088
+-1.049180
+1.221964
+0.356141
+0.053737
+-0.222092
+0.459313
+1.553559
+-0.675362
+-0.854650
+2019-04-16
+-0.897561
+0.447977
+NaN
+NaN
+-1.144447
+0.558957
+0.647800
+0.921351
+0.193201
+-0.028600
+...
+-0.066911
+-1.020959
+1.154345
+0.345788
+0.144475
+-0.090068
+1.510570
+2.028425
+-0.602119
+-0.875330
+5 rows × 348 columns
+Next
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

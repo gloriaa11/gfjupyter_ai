@@ -1,0 +1,18 @@
+include README.md
+include LICENSE
+include ENVIRONMENT_VARIABLES.md
+include *.py
+recursive-include jupyter_ai/static *
+recursive-include jupyter_ai/personas *.py *.md *.txt *.json
+recursive-include jupyter_ai/tests *.py
+recursive-include jupyter_ai/mcp *.py *.json
+recursive-include jupyter_ai/config *.py
+recursive-include jupyter_ai/completions *.py
+recursive-include jupyter_ai/auth *.py
+recursive-include jupyter_ai/tools *.py
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .git*
+global-exclude .DS_Store
+global-exclude *.log
+global-exclude *.db

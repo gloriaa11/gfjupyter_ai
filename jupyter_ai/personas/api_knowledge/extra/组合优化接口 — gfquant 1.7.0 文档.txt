@@ -1,0 +1,633 @@
+
+组合优化接口
+View page source
+组合优化接口
+¶
+因为组合优化器需要取若干因子值，因此组合优化的接口也整合在
+DataApi
+里，优化器接口为
+DataApi.portfolio_optimize(expect_rtn_series, day, ..)
+⬅ 点击链接查看参数
+可实现满足以下限制条件下的最优化权重的求解：
+行业偏离上下限，可统一设定（行业分类标准：申万/中信一级行业，可选将部分一级行业拆分为二级行业），在此基础上可以分别对各个行业的偏离上下限进行设定
+市值或Barra十个风格因子偏离上下限（如选择Barra，还可以在此基础上对个别Barra风格因子分别设定偏离上下限）
+个股权重上下限，个股权重相对偏离上下限
+基准指数成分股在组合中的权重之和的下限
+组合换手率的上限
+组合跟踪误差的上限
+运行组合优化器至少需要输入一个预期收益序列(expect_rtn_series)和一个日期
+以下代码首先取出近一个月的涨幅因子，标准化处理后作为运行示例所需要的预期收益
+[1]:
+import
+gfquant
+api
+=
+gfquant
+.
+DataApi
+()
+print
+(
+gfquant
+.
+__version__
+)
+1.1.0
+[2]:
+day
+=
+'20190401'
+# 取过去一个月的涨幅因子，标准化处理后当作预期收益
+exp
+=
+api
+.
+get_factor_series
+(
+'CHGCLOSE_1M'
+,
+day
+,
+neutral
+=
+True
+)
+# 因子值最大的几个股票
+exp
+.
+sort_values
+(
+ascending
+=
+False
+)
+.
+head
+(
+10
+)
+.
+to_frame
+()
+[2]:
+2019-04-01 00:00:00
+600928.SH
+3.668951
+600155.SH
+3.084947
+000723.SZ
+2.932233
+600259.SH
+2.842194
+000037.SZ
+2.831580
+002824.SZ
+2.826935
+000993.SZ
+2.822010
+300332.SZ
+2.725922
+000831.SZ
+2.702973
+600093.SH
+2.696448
+[3]:
+# 以沪深300作为基准
+ben
+=
+api
+.
+get_factor_series
+(
+'WEIGHT_300'
+,
+day
+)
+# 基准里权重最高的几个股票
+ben
+.
+sort_values
+(
+ascending
+=
+False
+)
+.
+head
+(
+10
+)
+.
+to_frame
+()
+[3]:
+2019-04-01 00:00:00
+601318.SH
+0.06866
+600519.SH
+0.03481
+600036.SH
+0.02835
+000333.SZ
+0.01980
+601166.SH
+0.01875
+000651.SZ
+0.01832
+600030.SH
+0.01604
+000858.SZ
+0.01511
+600887.SH
+0.01459
+600276.SH
+0.01406
+[4]:
+# 基准里权重最高的几个行业
+sect
+=
+api
+.
+get_factor_series
+(
+'LEVEL_1_CITIC'
+,
+day
+)
+sect_w
+=
+ben
+.
+groupby
+(
+sect
+)
+.
+sum
+()
+.
+sort_values
+(
+ascending
+=
+False
+)
+sect_w
+.
+head
+(
+10
+)
+.
+to_frame
+()
+[4]:
+2019-04-01 00:00:00
+2019-04-01 00:00:00
+非银行金融
+0.17604
+银行
+0.16565
+食品饮料
+0.08408
+医药
+0.06779
+家电
+0.05083
+房地产
+0.04943
+电子元器件
+0.04412
+建筑
+0.03384
+交通运输
+0.03193
+汽车
+0.02861
+优化器的默认参数
+¶
+请参考
+DataApi.portfolio_optimize
+的参数的默认值，直接按默认参数调用相当于应用了以下优化限制条件(其中的百分比均用数字表示，如0.01=1%)：
+条件
+说明
+bench='WEIGHT_300'
+使用沪深300作为基准
+sector='LEVEL_1_CITIC'
+使用中信一级行业作为行业分类标准
+sect_exp_min=-0.0
+行业暴露下限为：基准行业权重 - 0.0
+sect_exp_max=
+0.0
+行业暴露上限为：基准行业权重 + 0.0, 和sect_exp_min=-0.0组合起来，就是行业权重和基准一致（没有行业暴露）
+style_factors='LNMV'
+使用LNMV(总市值的自然对数)作为风格因子
+style_exp_min=-0.0
+风格因子暴露下限为：基准的风格因子暴露 - 0.0
+style_exp_max=
+0.0
+风格因子暴露下限为：基准的风格因子暴露 + 0.0，和style_exp_min=-0.0组合起来，就是没有风格因子暴露
+rel_weight_min=None
+单个股票的(权重-基准中该股票的权重)的下限不限制，即不管股票在基准中的权重是多少，优化器都可以不选该股票
+rel_weight_max=0.02
+单个股票的(权重-基准中该股票的权重)的上限为2%
+abs_weight_min=0.0
+单个股票在组合中的权重下限为0% (可以不选)
+abs_weight_max=0.1
+单个股票在组合中的权重上限为10%
+bench_pct=0.8
+组合中的基准指数成分股的权重之和至少为80%
+result_weight_min=0.001
+优化结果中股票的最低权重为0.1%，小于此值的股票被剔除，被剔除的权重会按权重比例分配给组合中剩余的股票
+result_weight_sum=0.9999
+优化结果中股票的权重之和(即组合的仓位)为99.99%，若指定为1.0有时会出现数值计算误差，令实际仓位大于100%
+其余优化参数的默认值均为None，表示不加入对应的限制条件。
+如要删除默认的限制条件，可以按如下方法：
+sector=None
+: 放开所有行业限制，也可以用
+sect_exp_min=-1,
+sect_exp_max=1
+，即行业偏离设置为±100%
+style_factors=None
+: 放开所有风格因子限制，注意风格因子暴露度(
+style_exp_*
+)不是百分比，它对标准化后的因子相当于标准差倍数(对非标准化的因子没有一致的含义)
+rel_weight_max=1
+: 不限制个股的相对权重上限，也就是设置为100%
+abs_weight_max=1
+: 不限制个股的绝对权重上限，也就是设置为100%
+bench_pct=0
+: 不限制基准指数成分股的权重之和，也就是设置为0%
+由于结果权重有被剔除再重新分配的机制，因此默认结果权重的暴露度可能会比限制条件略有偏差。如需要更精确地核对结果，请设置
+result_weight_min=0,
+result_weight_sum=1
+，也就是不限制返回的个股权重下限，且仓位为100%
+[5]:
+# 例：使用默认参数做组合优化
+weight
+=
+api
+.
+portfolio_optimize
+(
+exp
+,
+day
+)
+# 计算结果的行业暴露度（限制条件为没有行业暴露）
+(
+weight
+.
+groupby
+(
+sect
+)
+.
+sum
+()
+-
+sect_w
+)
+.
+sort_values
+(
+ascending
+=
+False
+)
+.
+head
+(
+10
+)
+.
+to_frame
+()
+[5]:
+2019-04-01 00:00:00
+2019-04-01 00:00:00
+纺织服装
+-1.015030e-07
+轻工制造
+-1.876056e-07
+综合
+-2.380071e-07
+餐饮旅游
+-4.823145e-07
+商贸零售
+-5.607168e-07
+煤炭
+-6.860206e-07
+农林牧渔
+-6.923207e-07
+钢铁
+-7.588228e-07
+建材
+-9.359280e-07
+国防军工
+-1.108833e-06
+[6]:
+# 结果中个股权重减去对应基准中权重（限制条件为不超过基准个股权重+2%）
+weight
+.
+sub
+(
+ben
+,
+fill_value
+=
+0
+)
+.
+sort_values
+(
+ascending
+=
+False
+)
+.
+head
+(
+10
+)
+.
+to_frame
+()
+[6]:
+2019-04-01 00:00:00
+600928.SH
+0.019998
+600155.SH
+0.019998
+600093.SH
+0.019998
+000813.SZ
+0.019998
+600284.SH
+0.019998
+601212.SH
+0.019998
+601108.SH
+0.019998
+601066.SH
+0.019998
+002508.SZ
+0.019998
+600018.SH
+0.019998
+优化参数设置说明
+¶
+选择基准权重
+bench
+: 基准权重因子名，支持 “WEIGHT_[300|500|800|1000|CYB|ALL]”
+行业中性化
+sector
+: 一级行业因子名，支持 “LEVEL_1_[CITIC|SW]”, 设为None则不做行业中性化
+split_sectors
+: 需要拆分为二级行业的一级行业名称列表。如 sector=‘LEVEL_1_CITIC’, split_sectors=[‘非银行金融’] 则会把非银金融拆分为二级行业： ‘证券Ⅱ’/‘保险Ⅱ’/‘信托及其他’。 参见拆分一级行业的函数：
+DataApi.get_split_sector_series
+sect_exp_min
+和
+sect_exp_max
+: 组合相对基准的行业暴露下限和上限
+sect_exp_min_deviation
+和
+sect_exp_max_deviation
+: 单独设置行业暴露度在
+sect_exp_min
+和
+sect_exp_max
+基础上的偏离
+举例说明：
+sect_exp_min=-0.01,
+sect_exp_max=0.02
+表示限制优化结果中每个行业的权重为：基准中行业i权重-1% ≤ 优化结果中行业i权重 ≤ 基准中行业i权重+2%
+sect_exp_min=-0.01,
+sect_exp_max=0.02,
+sect_exp_min_deviation={'房地产':
+0.03,
+'传媒':
+-0.01},
+sect_exp_max_deviation={'房地产':
+0.05}
+表示限制优化结果中每个行业的权重为：基准中行业i权重-1% ≤ 优化结果中行业i权重 ≤ 基准中行业i权重+2%
+但: 基准中
+房地产
+权重+2% ≤ 优化结果中
+房地产
+权重 ≤ 基准中
+房地产
+权重+7% (+2% = -0.01+0.03, +7% = 0.02+0.05)
+且: 基准中
+传媒
+权重-2% ≤ 优化结果中
+传媒
+权重 ≤ 基准中
+传媒
+权重+2%
+对于已拆分为二级行业的一级行业，如需设置sect_exp_[min|max]_deviation，因其被拆分的一级行业名称已无效，需设置为对应的二级行业名称
+风格中性化
+style_factors
+: 风格因子类型，可选’LNMV’(总市值的自然对数) 或’BARRA’(10个Barra风格因子)，也可以自定义风格因子(参见
+因子标准化处理
+)
+style_exp_min
+和
+style_exp_max
+: 组合相对基准的风格因子暴露下限和上限（数值对标准化后的因子相当于标准差倍数，而非百分比）
+style_exp_min_deviation
+和
+style_exp_max_deviation
+: 单独设置风格因子暴露度在
+style_exp_min
+和
+style_exp_max
+基础上的偏离
+举例说明：
+style_factors="LNMV",
+style_exp_min=0,
+style_exp_min=0
+表示完全市值中性
+style_factors="BARRA",
+style_exp_min=0,
+style_exp_min=0,
+style_exp_min_deviation={'BARRA_EARNYIELD':
+0.1},
+style_exp_max_deviation={'BARRA_EARNYIELD':
+0.5}
+表示对BARRA_EARNYIELD因子限制有0.1至0.5的正向暴露，对其余的9个Barra风格因子中性
+限制个股相对权重
+rel_weight_min
+和
+rel_weight_max
+: 组合内个股相对基准的的权重偏差下限
+举例说明：
+rel_weight_min=-0.02,
+rel_weight_max=0.01
+表示限制：基准中个股i权重-2% ≤ 优化结果中个股i权重 ≤ 基准中个股i权重+1%
+rel_weight_min=None,
+rel_weight_max=1
+表示不限制优化结果中的个股的权重
+限制个股绝对权重
+abs_weight_min
+和
+abs_weight_min
+: 组合内个股绝对权重偏差下限
+举例说明：
+abs_weight_min=-0.02,
+abs_weight_min=0.01
+表示限制：-2% ≤ 优化结果中个股权重 ≤ 1%，因为个股权重必须大于零，其实-2%的限制即为不限制
+abs_weight_min=0,
+abs_weight_min=1
+表示不限制优化结果中的个股的绝对权重，注：如果abs_weight_min=0.01(大于0)，那么参数
+expect_rtn_series
+中包含的所有股票都会有至少1%权重(可能导致优化求解失败)
+限制基准成分股的权重
+bench_pct
+: 组合内基准指数成分股的权重占比下限，取值范围：bench_pct ≤ 1，取0为不限制
+限制换手率
+turnover_max
+: 组合换手率上限，如1.5表示限制当次调仓的双边换手率≤150%；取≥2为不限制
+pre_weight
+: 调仓前的持仓权重，如无持仓可设为None
+限制跟踪误差
+trackerr_max
+: 跟踪误差上限，如0.05表示限制跟踪误差≤5%
+注意：限制跟踪误差的计算量可能会很大！
+下面这个例子以沪深300为基准，限制跟踪误差≤8%/5%，做一次组合优化的时间统计：
+优化耗时
+跟踪误差≤8%
+跟踪误差≤5%
+股票数= 300
+1.5秒
+1.5秒
+股票数= 500
+6秒
+9秒
+股票数= 800
+55秒
+55秒
+股票数=1000
+99秒
+124秒
+股票数=1800
+>16分
+>18分
+股票数=3000
+>96分
+>97分
+[7]:
+divp
+=
+api
+.
+get_factor_series
+(
+'DIVP'
+,
+day
+,
+neutral
+=
+True
+)
+[8]:
+%%time
+it -r1 -n1
+exp2
+=
+divp
+.
+sort_values
+(
+ascending
+=
+False
+)
+.
+head
+(
+500
+)
+print
+(
+f
+'Universe: {len(exp)} --> {len(exp2)}'
+)
+w2
+=
+api
+.
+portfolio_optimize
+(
+exp2
+,
+day
+,
+bench
+=
+'WEIGHT_300'
+,
+sector
+=
+'LEVEL_1_SW'
+,
+split_sectors
+=
+[
+'非银金融'
+],
+sect_exp_min_deviation
+=
+{
+'银行'
+:
+0.02
+},
+sect_exp_max_deviation
+=
+{
+'银行'
+:
+0.1
+},
+style_factors
+=
+'BARRA'
+,
+style_exp_max_deviation
+=
+{
+'BARRA_SIZE'
+:
+0.6
+},
+rel_weight_max
+=
+0.1
+,
+abs_weight_max
+=
+0.2
+,
+bench_pct
+=
+0.7
+,
+trackerr_max
+=
+0.08
+,
+)
+Universe: 3586 --> 500
+6.92 s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
+Next
+Previous
+© Copyright 2018-2022, GF Funds 量化投资部
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.
